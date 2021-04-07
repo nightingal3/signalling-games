@@ -1,13 +1,12 @@
 import csv
-import nashpy as nash
 import numpy as np
 from fractions import Fraction
 from typing import Tuple, List
 from itertools import combinations_with_replacement
 from collections import Counter
-import time
 import pdb
-from pprint import pprint
+import argparse
+import pickle
 
 NUM_EVENTS = 3
 NUM_SIGNALS = 3
@@ -45,8 +44,24 @@ def enumerate_rewards_nxm(n: int, m: int, probs: List, costs: List, granularity:
     rows = generate_allocations(m, granularity=granularity)
     cols = generate_allocations(n, granularity=granularity)
 
-    combs_sender = [np.array(x) for x in list(combinations_with_replacement(rows, n))]
-    combs_receiver = [np.array(x) for x in list(combinations_with_replacement(rows, m))]
+    combs_sender_base = [np.array(x) for x in list(combinations_with_replacement(rows, n))]
+    combs_receiver_base = [np.array(x) for x in list(combinations_with_replacement(cols, m))]
+
+    seen_sender = []
+    combs_sender = []
+    for c in combs_sender_base:
+        if c.tolist() not in seen_sender:
+            combs_sender.append(c)
+        seen_sender.append(c.tolist())
+        seen_sender.append(np.flip(c, axis=1).tolist())
+
+    seen_receiver = []
+    combs_receiver = []
+    for c in combs_receiver_base:
+        if c.tolist() not in seen_receiver:
+            combs_receiver.append(c)
+        seen_receiver.append(c.tolist())
+        seen_receiver.append(np.flip(c, axis=1).tolist())
 
     reward_matrix = np.zeros((len(combs_sender), len(combs_receiver)))
     sender_key = {}
@@ -77,11 +92,9 @@ def generate_allocations(m: int, granularity: float = 0.1) -> List:
                 yield lst
 
     n = int(1 / granularity)
-    print("N: ", n)
     allocations = []
     for xs in f(range(n+1), n, m):
         if sum([i * granularity for i in xs]) == 1:
-            print([i * granularity for i in xs])
             allocations.append([i * granularity for i in xs])
 
     return allocations
@@ -100,24 +113,46 @@ def generate_lrs_game_file(reward_matrix: np.ndarray, trial_name: str, convert_t
             frac_row = [str(Fraction(item)) for item in row]
             writer.writerow(frac_row)
         
+def main() -> None:
+    pass
 
 if __name__ == "__main__":
-    start = time.time()
-    probs = [0.7, 0.2, 0.05, 0.05]
-    costs = [1, 5]
+    parser = argparse.ArgumentParser(description="Generate the reward matrix for a game with varying costs, probabilities, states, and signals. Writes to a file for processing.")
+    parser.add_argument("-n", "--states", type=int, help="The number of states in the game", required=True)
+    parser.add_argument("-m", "--signals", type=int, help="The number of signals in the game", required=True)
+    parser.add_argument("-g", type=float, help="Granularity of allocations between states/signals", default=0.25)
+    parser.add_argument("-i", type=int, help="Number of increments allowed for functions of sender and receiver. Alternative to granularity.")
+    parser.add_argument("-p", "--probs", type=float, nargs="+", help="Probabilities of states (must match number of states)")
+    parser.add_argument("-c", "--costs", type=float, nargs="+", help="Costs of signals (must match number of signals)")
+    parser.add_argument("-o", type=str, help="Name of file to write game file to (should be a txt file)", required=True)
+    parser.add_argument("-k", "--key-out", type=str, help="Name of file to write matrix key to")
 
-    rewards, sender_key, receiver_key = enumerate_rewards_nxm(n=4, m=2, probs=probs, costs=costs, granularity=0.25)
-    #rewards, sender_key, receiver_key = enumerate_rewards_2x2(probs=probs, costs=costs, granularity=0.2)
-    print(rewards)
-    generate_lrs_game_file(rewards, "trial_4", convert_to_frac=True)
-    assert False
-    rps = nash.Game(rewards, rewards)
+    args = parser.parse_args()
+    N = args.states
+    M = args.signals
+    granularity = args.g
+    if args.i:
+        granularity = 1/args.i
+    probs = args.probs
+    costs = args.costs
+    out_filename = f"nash_trials/{args.o}"
+    key_filename = args.key_out
+
+    if probs is None:
+        probs = [1/args.n for i in range(args.n)]
+    if sum(probs) != 1:
+        probs = [i/sum(probs) for i in probs]
+    if costs is None:
+        costs = [1 for i in range(args.m)]
+    if key_filename is None:
+        key_filename = f"{out_filename}_key.p"
+
+    rewards, sender_key, receiver_key = enumerate_rewards_nxm(n=N, m=M, probs=probs, costs=costs, granularity=granularity)
+
+    generate_lrs_game_file(rewards, out_filename, convert_to_frac=True)
+
+    with open(key_filename, "wb") as key_file:
+        master_key = {"sender": sender_key, "receiver": receiver_key}
+        pickle.dump(master_key, key_file)
+        
    
-    print(rps)
-    eqs = rps.support_enumeration()
-    print(list(eqs))
-    print(sender_key)
-    print(receiver_key)
-    end = time.time()
-    print("time: ", end - start)
-
