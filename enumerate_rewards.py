@@ -113,8 +113,14 @@ def generate_lrs_game_file(reward_matrix: np.ndarray, trial_name: str, convert_t
             frac_row = [str(Fraction(item)) for item in row]
             writer.writerow(frac_row)
         
-def main() -> None:
-    pass
+def main(N: int, M: int, granularity: float, probs: List, costs: List, out_filename: str, key_filename: str) -> None:
+    rewards, sender_key, receiver_key = enumerate_rewards_nxm(n=N, m=M, probs=probs, costs=costs, granularity=granularity)
+
+    generate_lrs_game_file(rewards, out_filename, convert_to_frac=True)
+
+    with open(key_filename, "wb") as key_file:
+        master_key = {"sender": sender_key, "receiver": receiver_key}
+        pickle.dump(master_key, key_file)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate the reward matrix for a game with varying costs, probabilities, states, and signals. Writes to a file for processing.")
@@ -147,12 +153,7 @@ if __name__ == "__main__":
     if key_filename is None:
         key_filename = f"{out_filename}_key.p"
 
-    rewards, sender_key, receiver_key = enumerate_rewards_nxm(n=N, m=M, probs=probs, costs=costs, granularity=granularity)
-
-    generate_lrs_game_file(rewards, out_filename, convert_to_frac=True)
-
-    with open(key_filename, "wb") as key_file:
-        master_key = {"sender": sender_key, "receiver": receiver_key}
-        pickle.dump(master_key, key_file)
+    main(N, M, granularity, probs, costs, out_filename, key_filename)
+   
         
    
