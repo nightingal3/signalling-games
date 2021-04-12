@@ -47,7 +47,6 @@ def random_simulation(n: int, m: int, granularity: float, out_filename: str, key
         try:
             PoA, PoS = sim_with_params(n, m, granularity, probs, costs, out_fname, key_fname)
         except:
-            num_simulations += 1
             continue
 
         x_coords.append(entropy_probs)
