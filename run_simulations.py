@@ -189,6 +189,7 @@ if __name__ == "__main__":
 
     with open(f"{TRIALS_DIR}/pickled/simulation.p", "wb") as p_file:
         simulation_data = {"entropy_probs": x, "entropy_costs": y, "probs": all_probs, "costs": all_costs,  "price_anarchy": anarchy, "price_stability": stability}
+        pickle.dump(simulation_data, p_file)
 
 
     
