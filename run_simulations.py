@@ -166,7 +166,7 @@ if __name__ == "__main__":
     parser.add_argument("-g", type=float, help="Granularity of allocations between states/signals", default=0.25)
     parser.add_argument("-o", type=str, help="Name of file to write game file to (exclude .txt)")
     parser.add_argument("-k", type=str, help="Name of file to write matrix key to (exclude .p)")
-    parser.add_argument("-t", type=int, help="Number of random simulations to run")
+    parser.add_argument("-t", type=int, help="Number of random simulations to run", required=True)
     
     args = parser.parse_args()
     N = args.states
@@ -182,7 +182,7 @@ if __name__ == "__main__":
 
     TRIALS_DIR = f"{TRIALS_DIR}/{N}_{M}"
 
-    x, y, anarchy, stability, all_probs, all_costs = random_simulation(N, M, granularity, f"{out_f}.txt", f"{out_key}.p", num_simulations=num_simulations, timeout_s=timeout_s)
+    x, y, anarchy, stability, all_probs, all_costs = random_simulation(N, M, granularity, f"{out_f}.txt", f"{out_key}.p", num_simulations=num_simulations)
     graph_entropy_and_ne(x, y, anarchy, out_filename="3_2_anarchy.png")
     plt.gcf().clear()
     graph_entropy_and_ne(x, y, stability, title="Price of stability", out_filename="3_2_stability.png")
