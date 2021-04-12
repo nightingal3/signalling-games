@@ -1,6 +1,7 @@
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import argparse
 import numpy as np
 from scipy.stats import entropy
 from typing import List
@@ -159,15 +160,34 @@ class SqueezedNorm(matplotlib.colors.Normalize):
 
 
 if __name__ == "__main__":
-    N = 3
-    M = 2
+    parser = argparse.ArgumentParser(description="Solve nxm games for randomly generated probabilities and costs, make figures of entropy vs. price of anarchy/stability")
+    parser.add_argument("-n", "--states", type=int, help="The number of states in the game", required=True)
+    parser.add_argument("-m", "--signals", type=int, help="The number of signals in the game", required=True)
+    parser.add_argument("-g", type=float, help="Granularity of allocations between states/signals", default=0.25)
+    parser.add_argument("-o", type=str, help="Name of file to write game file to (exclude .txt)")
+    parser.add_argument("-k", type=str, help="Name of file to write matrix key to (exclude .p)")
+    parser.add_argument("-t", type=int, help="Number of random simulations to run")
+    
+    args = parser.parse_args()
+    N = args.states
+    M = args.signals
+    granularity = args.g
+    out_f = args.o
+    out_key = args.k
+    if args.o is None:
+        out_f = f"test_{N}_{M}"
+    if args.k is None:
+        out_key = f"test_{N}_{M}_key"
+    num_simulations = args.t
+
     TRIALS_DIR = f"{TRIALS_DIR}/{N}_{M}"
-    x, y, anarchy, stability, all_probs, all_costs = random_simulation(N, M, 0.25, "test_3_2.txt", "test_3_2_key.p", num_simulations=10)
+
+    x, y, anarchy, stability, all_probs, all_costs = random_simulation(N, M, granularity, f"{out_f}.txt", f"{out_key}.p", num_simulations=num_simulations, timeout_s=timeout_s)
     graph_entropy_and_ne(x, y, anarchy, out_filename="3_2_anarchy.png")
     plt.gcf().clear()
     graph_entropy_and_ne(x, y, stability, title="Price of stability", out_filename="3_2_stability.png")
 
-    with open(f"{TRIALS_DIR}/pickled/simulation.p", "rb") as p_file:
+    with open(f"{TRIALS_DIR}/pickled/simulation.p", "wb") as p_file:
         simulation_data = {"entropy_probs": x, "entropy_costs": y, "probs": all_probs, "costs": all_costs,  "price_anarchy": anarchy, "price_stability": stability}
 
 
